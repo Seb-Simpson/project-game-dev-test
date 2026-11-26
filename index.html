@@ -1,0 +1,416 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b1328">
+  <title>Coin Run — Little Treasure Hunt</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --ink: #f5f7ff;
+      --muted: #aab6d3;
+      --panel: #131e39;
+      --line: rgba(169, 189, 236, .16);
+      --gold: #ffd166;
+      --mint: #64e8c2;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      min-height: 100vh;
+      min-height: 100svh;
+      margin: 0;
+      padding: 20px;
+      display: grid;
+      place-items: center;
+      color: var(--ink);
+      background:
+        radial-gradient(ellipse at 50% 0%, rgba(39, 60, 112, .45), transparent 55%),
+        #0b1328;
+    }
+    .app {
+      width: min(960px, 100%);
+      display: grid;
+      gap: 16px;
+    }
+    .intro { text-align: center; }
+    .eyebrow {
+      margin: 0 0 5px;
+      color: var(--mint);
+      font-size: .72rem;
+      font-weight: 800;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+    }
+    h1 {
+      margin: 0;
+      font-size: clamp(1.55rem, 4vw, 2.35rem);
+      line-height: 1.12;
+      letter-spacing: -.045em;
+    }
+    .subtitle { margin: 7px 0 0; color: var(--muted); font-size: .95rem; }
+    .toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 12px 15px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: linear-gradient(135deg, rgba(24, 37, 68, .96), rgba(16, 27, 52, .96));
+      box-shadow: 0 12px 35px rgba(0, 0, 0, .16);
+    }
+    .score-label { display: block; color: var(--muted); font-size: .7rem; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; }
+    .score-value { display: block; margin-top: 1px; color: var(--gold); font-size: 1.45rem; font-weight: 850; font-variant-numeric: tabular-nums; line-height: 1.1; }
+    .how-to { color: var(--muted); font-size: .86rem; text-align: center; }
+    kbd {
+      padding: 2px 5px;
+      border: 1px solid rgba(207, 219, 255, .24);
+      border-radius: 5px;
+      color: var(--ink);
+      background: rgba(255, 255, 255, .06);
+      font: inherit;
+      font-size: .78rem;
+      box-shadow: 0 1px 0 rgba(255,255,255,.1);
+      white-space: nowrap;
+    }
+    .restart {
+      flex: 0 0 auto;
+      min-height: 42px;
+      padding: 0 15px;
+      border: 1px solid rgba(100, 232, 194, .42);
+      border-radius: 11px;
+      color: #071e1a;
+      background: var(--mint);
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform .15s ease, filter .15s ease, box-shadow .15s ease;
+      box-shadow: 0 5px 16px rgba(100, 232, 194, .13);
+    }
+    .restart:hover { filter: brightness(1.08); transform: translateY(-1px); }
+    .restart:active { transform: translateY(1px); }
+    .restart:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+    .arena-frame {
+      position: relative;
+      width: min(100%, 800px);
+      aspect-ratio: 4 / 3;
+      justify-self: center;
+      overflow: hidden;
+      border-radius: 18px;
+      background: #101b34;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, .34), 0 0 0 1px rgba(186, 205, 255, .2);
+      touch-action: manipulation;
+    }
+    canvas { display: block; width: 100%; height: 100%; outline: none; }
+    canvas:focus-visible { box-shadow: inset 0 0 0 3px rgba(100, 232, 194, .8); }
+    .victory {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 22px;
+      background: rgba(6, 13, 29, .68);
+      backdrop-filter: blur(5px);
+    }
+    .victory[hidden] { display: none; }
+    .victory-card {
+      width: min(100%, 390px);
+      padding: clamp(20px, 5vw, 34px);
+      border: 1px solid rgba(255, 209, 102, .5);
+      border-radius: 20px;
+      background: linear-gradient(145deg, #202f56, #131e39);
+      text-align: center;
+      box-shadow: 0 18px 55px rgba(0,0,0,.38), 0 0 35px rgba(255, 209, 102, .12);
+      animation: pop-in .32s cubic-bezier(.2,.9,.3,1.2) both;
+    }
+    .trophy { margin: 0 0 8px; font-size: 2.4rem; line-height: 1; }
+    .victory h2 { margin: 0; color: var(--gold); font-size: clamp(1.45rem, 5vw, 2rem); letter-spacing: -.03em; }
+    .victory p { margin: 9px 0 0; color: #d4def6; }
+    .footer { color: #8290b0; font-size: .75rem; text-align: center; }
+    @keyframes pop-in { from { opacity: 0; transform: scale(.92) translateY(8px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+    @media (max-width: 560px) {
+      body { padding: 14px 12px; }
+      .app { gap: 12px; }
+      .toolbar { display: grid; grid-template-columns: 1fr auto; gap: 8px 10px; padding: 10px 12px; }
+      .how-to { grid-column: 1 / -1; grid-row: 2; font-size: .77rem; }
+      .score-value { font-size: 1.3rem; }
+      .restart { grid-column: 2; grid-row: 1; }
+      .arena-frame { border-radius: 13px; }
+      .footer { font-size: .7rem; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app" id="app">
+    <header class="intro">
+      <p class="eyebrow">A little treasure hunt</p>
+      <h1>Coin Run</h1>
+      <p class="subtitle">Gather every coin in the garden.</p>
+    </header>
+
+    <section class="toolbar" aria-label="Game controls and score">
+      <div class="score" aria-label="Coin score">
+        <span class="score-label">Coins collected</span>
+        <span class="score-value" id="score" aria-live="polite">0 / 10</span>
+      </div>
+      <div class="how-to">Move with <kbd>WASD</kbd> or <kbd>↑</kbd><kbd>←</kbd><kbd>↓</kbd><kbd>→</kbd> <span aria-hidden="true">·</span> Press <kbd>R</kbd> to restart</div>
+      <button class="restart" id="restart" type="button" aria-label="Restart game">↻ &nbsp;Restart</button>
+    </section>
+
+    <div class="arena-frame" id="arenaFrame">
+      <canvas id="game" width="800" height="600" tabindex="0" role="img" aria-label="Coin Run game arena. Use WASD or arrow keys to move the mint player and collect ten gold coins."></canvas>
+      <div class="victory" id="victory" hidden>
+        <div class="victory-card" role="status" aria-live="assertive">
+          <p class="trophy" aria-hidden="true">🏆</p>
+          <h2>You collected all 10 coins!</h2>
+          <p>The garden is sparkling. Ready for another run?</p>
+        </div>
+      </div>
+    </div>
+    <footer class="footer">A tiny arcade break · no timer, just treasure</footer>
+  </main>
+
+  <script>
+    (() => {
+      'use strict';
+
+      const WIDTH = 800;
+      const HEIGHT = 600;
+      const PLAYER_RADIUS = 16;
+      const COIN_RADIUS = 12;
+      const SPEED = 220;
+      const START_COINS = [
+        [120, 120], [260, 100], [430, 110], [640, 130], [700, 300],
+        [640, 480], [460, 500], [280, 480], [100, 430], [110, 280]
+      ];
+      const app = document.getElementById('app');
+      const intro = document.querySelector('.intro');
+      const toolbar = document.querySelector('.toolbar');
+      const footer = document.querySelector('.footer');
+      const arena = document.getElementById('arenaFrame');
+      const canvas = document.getElementById('game');
+      const ctx = canvas.getContext('2d');
+      const scoreEl = document.getElementById('score');
+      const victoryEl = document.getElementById('victory');
+      const restartButton = document.getElementById('restart');
+      const held = new Set();
+      const movementCodes = new Set([
+        'KeyW', 'KeyA', 'KeyS', 'KeyD',
+        'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight'
+      ]);
+      let player;
+      let coins;
+      let score;
+      let gameState;
+      let effects;
+      let lastTime = null;
+      let cssWidth = WIDTH;
+      let dpr = 1;
+
+      function resetGame() {
+        player = { x: WIDTH / 2, y: HEIGHT / 2 };
+        coins = START_COINS.map(([x, y], id) => ({ x, y, id }));
+        score = 0;
+        gameState = 'playing';
+        effects = [];
+        held.clear();
+        scoreEl.textContent = '0 / 10';
+        victoryEl.hidden = true;
+        render(0);
+      }
+
+      function resizeArena() {
+        const appWidth = app.clientWidth;
+        const introHeight = intro.getBoundingClientRect().height;
+        const toolbarHeight = toolbar.getBoundingClientRect().height;
+        const footerHeight = footer.getBoundingClientRect().height;
+        const bodyStyle = getComputedStyle(document.body);
+        const verticalPadding = parseFloat(bodyStyle.paddingTop) + parseFloat(bodyStyle.paddingBottom);
+        const gap = parseFloat(getComputedStyle(app).rowGap) || 16;
+        const availableHeight = Math.max(110, window.innerHeight - verticalPadding - introHeight - toolbarHeight - footerHeight - gap * 3);
+        const logicalWidth = Math.max(160, Math.min(WIDTH, appWidth, availableHeight * WIDTH / HEIGHT));
+        cssWidth = logicalWidth;
+        dpr = Math.min(window.devicePixelRatio || 1, 2);
+        arena.style.width = `${logicalWidth}px`;
+        arena.style.height = `${logicalWidth * HEIGHT / WIDTH}px`;
+        canvas.width = Math.round(logicalWidth * dpr);
+        canvas.height = Math.round(logicalWidth * HEIGHT / WIDTH * dpr);
+        ctx.setTransform(canvas.width / WIDTH, 0, 0, canvas.width / WIDTH, 0, 0);
+        render(0);
+      }
+
+      function keyIsFromEditable(target) {
+        return target instanceof HTMLElement && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName));
+      }
+
+      function onKeyDown(event) {
+        if (keyIsFromEditable(event.target)) return;
+        const key = event.key.toLowerCase();
+        if (key === 'r' && !event.repeat) {
+          event.preventDefault();
+          resetGame();
+          return;
+        }
+        if (movementCodes.has(event.code)) {
+          if (event.code.startsWith('Arrow')) event.preventDefault();
+          held.add(event.code);
+        }
+      }
+
+      function onKeyUp(event) {
+        held.delete(event.code);
+      }
+
+      function update(dt, elapsed) {
+        if (gameState !== 'playing') return;
+        let dx = Number(held.has('KeyD') || held.has('ArrowRight')) - Number(held.has('KeyA') || held.has('ArrowLeft'));
+        let dy = Number(held.has('KeyS') || held.has('ArrowDown')) - Number(held.has('KeyW') || held.has('ArrowUp'));
+        const magnitude = Math.hypot(dx, dy);
+        if (magnitude > 0) {
+          dx /= magnitude;
+          dy /= magnitude;
+          player.x += dx * SPEED * dt;
+          player.y += dy * SPEED * dt;
+          player.x = Math.max(PLAYER_RADIUS, Math.min(WIDTH - PLAYER_RADIUS, player.x));
+          player.y = Math.max(PLAYER_RADIUS, Math.min(HEIGHT - PLAYER_RADIUS, player.y));
+        }
+
+        for (let i = coins.length - 1; i >= 0; i--) {
+          const coin = coins[i];
+          const distance = Math.hypot(player.x - coin.x, player.y - coin.y);
+          if (distance <= PLAYER_RADIUS + COIN_RADIUS) {
+            coins.splice(i, 1);
+            score++;
+            scoreEl.textContent = `${score} / 10`;
+            effects.push({ x: coin.x, y: coin.y, age: 0 });
+            if (score === 10) {
+              gameState = 'victory';
+              held.clear();
+              victoryEl.hidden = false;
+              break;
+            }
+          }
+        }
+        effects = effects.filter(effect => {
+          effect.age += dt;
+          return effect.age < .38;
+        });
+        void elapsed;
+      }
+
+      function drawCoin(coin, time) {
+        const pulse = 1 + Math.sin(time * 3.2 + coin.id * 1.7) * .055;
+        ctx.save();
+        ctx.translate(coin.x, coin.y);
+        ctx.scale(pulse, pulse);
+        ctx.shadowColor = 'rgba(255, 190, 64, .55)';
+        ctx.shadowBlur = 13;
+        ctx.fillStyle = '#ffc94f';
+        ctx.beginPath();
+        ctx.arc(0, 0, COIN_RADIUS, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = '#fff0a8';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(0, 0, 8.5, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.fillStyle = 'rgba(255,255,255,.72)';
+        ctx.beginPath();
+        ctx.arc(-3.5, -4, 2.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      function render(time = 0) {
+        if (!ctx || !player) return;
+        ctx.setTransform(canvas.width / WIDTH, 0, 0, canvas.width / WIDTH, 0, 0);
+        const backdrop = ctx.createLinearGradient(0, 0, WIDTH, HEIGHT);
+        backdrop.addColorStop(0, '#14213e');
+        backdrop.addColorStop(1, '#0e1931');
+        ctx.fillStyle = backdrop;
+        ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+        ctx.save();
+        ctx.fillStyle = 'rgba(140, 169, 228, .11)';
+        for (let x = 28; x < WIDTH; x += 40) {
+          for (let y = 28; y < HEIGHT; y += 40) {
+            ctx.beginPath();
+            ctx.arc(x, y, 1.1, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+        ctx.strokeStyle = 'rgba(158, 184, 237, .42)';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(2, 2, WIDTH - 4, HEIGHT - 4);
+        ctx.restore();
+
+        for (const coin of coins) drawCoin(coin, time);
+        for (const effect of effects) {
+          const progress = effect.age / .38;
+          ctx.save();
+          ctx.globalAlpha = 1 - progress;
+          ctx.strokeStyle = '#fff0a8';
+          ctx.lineWidth = 3 - progress * 2;
+          ctx.beginPath();
+          ctx.arc(effect.x, effect.y, 13 + progress * 20, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        ctx.save();
+        ctx.shadowColor = 'rgba(0,0,0,.4)';
+        ctx.shadowBlur = 12;
+        ctx.shadowOffsetY = 4;
+        ctx.fillStyle = '#64e8c2';
+        ctx.beginPath();
+        ctx.arc(player.x, player.y, PLAYER_RADIUS, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetY = 0;
+        ctx.strokeStyle = '#d5fff4';
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+        ctx.fillStyle = '#0e483e';
+        ctx.beginPath();
+        ctx.arc(player.x - 5, player.y - 2, 2, 0, Math.PI * 2);
+        ctx.arc(player.x + 5, player.y - 2, 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#0e483e';
+        ctx.lineWidth = 1.7;
+        ctx.beginPath();
+        ctx.arc(player.x, player.y + 1, 5, .15, Math.PI - .15);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      function frame(timestamp) {
+        const dt = lastTime === null ? 0 : Math.min((timestamp - lastTime) / 1000, .05);
+        lastTime = timestamp;
+        update(dt, timestamp / 1000);
+        render(timestamp / 1000);
+        requestAnimationFrame(frame);
+      }
+
+      restartButton.addEventListener('click', resetGame);
+      canvas.addEventListener('pointerdown', () => canvas.focus({ preventScroll: true }));
+      window.addEventListener('keydown', onKeyDown, { passive: false });
+      window.addEventListener('keyup', onKeyUp);
+      window.addEventListener('blur', () => held.clear());
+      document.addEventListener('visibilitychange', () => { if (document.hidden) held.clear(); });
+      window.addEventListener('resize', resizeArena);
+      if ('ResizeObserver' in window) new ResizeObserver(resizeArena).observe(app);
+
+      resetGame();
+      resizeArena();
+      requestAnimationFrame(frame);
+    })();
+  </script>
+</body>
+</html>
